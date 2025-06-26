@@ -6,6 +6,10 @@ class  InventoryItem:
     def __init__(self, name, image_path, quantity=1):
         self.name = name
         self.quantity = quantity
+        if isinstance(image_path, str):
+            self.image = pygame.image.load(image_path).convert_alpha()
+        else:
+            self.image = image_path
         self.image = pygame.image.load(image_path).convert_alpha()
         self.image = pygame.transform.scale(self.image, (constants.SLOT_SIZE - 10, constants.SLOT_SIZE -10))
         self.dragging = False
@@ -30,13 +34,18 @@ class Inventory:
         #defirnir recetas de grafico
         self.recipes = {
             'axe': {
-                'pattern': [('wood', 'stone'), (None, None)],
+                'pattern': [
+                    ['wood', 'stone', None],
+                    [None, None, None],
+                    [None, None, None]
+                ],
                 'result': 'axe'
-            }
-        }    
+    }
+}
+   
 
     def add_item(self, item_name, quantity=1):
-        #primero intentar apilar en el hotbar
+        #primero intentar apilar en el hotbare
         for i, slot in enumerate(self.hotbar):
             if slot and slot.name == item_name:
                 slot.quantity += quantity
@@ -68,7 +77,7 @@ class Inventory:
             screen.blit(background, (0, 0))
 
             self._draw_main_inventory(screen)  
-            self.draw_crafting_grid(screen)     
+            self._draw_crafting_grid(screen)     
 
         #dibujar item siendo arrastrado al final para que aparezca encima de todo
         if self.dragged_item:
@@ -153,13 +162,14 @@ class Inventory:
                                                 constants.INVENTORY_Y + (row * constants.SLOT_SIZE))
                     return True
             # verificar clik en la cuadricula de crafteo
-            if constants.CRAFTING_GRID_Y <= mouse_y <= constants.CRAFTING_GRID_Y +(
-                constants.CRAFTING_GRID_SIZE * constants.SLOT_SIZE): 
+            if (constants.CRAFTING_GRID_X <= mouse_x <= constants.CRAFTING_GRID_X + (constants.CRAFTING_GRID_SIZE * constants.SLOT_SIZE) and
+                constants.CRAFTING_GRID_Y <= mouse_y <= constants.CRAFTING_GRID_Y + (constants.CRAFTING_GRID_SIZE * constants.SLOT_SIZE)): 
                 row = (mouse_y - constants.CRAFTING_GRID_Y) // constants.SLOT_SIZE   
                 col = (mouse_x - constants.CRAFTING_GRID_X) // constants.SLOT_SIZE
                 if (0 <= row < constants.CRAFTING_GRID_SIZE and 
                         0 <= col < constants.CRAFTING_GRID_SIZE):
                     self._handle_crafting_grid_click(button, row, col)
+                    return True
 
             #verificar click en el slot de resultado
             if (constants.CRAFTING_RESULT_SLOT_X <= mouse_x <= constants.CRAFTING_RESULT_SLOT_X + constants.SLOT_SIZE and
@@ -236,7 +246,7 @@ class Inventory:
                     self.dragged_item = None
                     return   
 
-    def _draw_crafting_grid(self, screen):
+    def _draw_crafting_grid(self, screen):   
         #dibujar cuadricula de crafteo
         for row in range(constants.CRAFTING_GRID_SIZE):
             for col in range(constants.CRAFTING_GRID_SIZE):
@@ -247,7 +257,7 @@ class Inventory:
                 pygame.draw.rect(screen, constants.SLOT_BORDER,
                                  (x, y, constants.SLOT_SIZE, constants.SLOT_SIZE))
                 pygame.draw.rect(screen, constants.SLOT_COLOR,
-                                 x + 2, y +2, constants.SLOT_SIZE -4, constants.SLOT_SIZE - 4)
+                                 (x + 2, y + 2, constants.SLOT_SIZE -4, constants.SLOT_SIZE - 4))
 
                 #dibujar item si existe
                 if self.crafting_grid[row][col]:
@@ -258,22 +268,28 @@ class Inventory:
                          (constants.CRAFTING_RESULT_SLOT_X, constants.CRAFTING_RESULT_SLOT_Y,
                           constants.SLOT_SIZE, constants.SLOT_SIZE))
         pygame.draw.rect(screen, constants.SLOT_COLOR,
-                         (constants.CRAFTING_RESULT_SLOT_X + 2, constants.CRAFTING_RESULT_SLOT_X + 2,
+                         (constants.CRAFTING_RESULT_SLOT_X + 2, constants.CRAFTING_RESULT_SLOT_Y + 2,
                           constants.SLOT_SIZE - 4, constants.SLOT_SIZE - 4))   
 
         #dibujar el resultado si existe
         if self.crafting_result:
             self._draw_item(screen, self.crafting_result,
                             constants.CRAFTING_RESULT_SLOT_X,
-                            constants.CRAFTING_GRID_Y)
+                            constants.CRAFTING_RESULT_SLOT_Y)
 
 
-    def _handle_crafting_grid_clik(self, button, row, col):
+    def _handle_crafting_grid_click(self, button, row, col):
+        mouse_pos = pygame.mouse.get_pos()
+        mouse_x, mouse_y = mouse_pos
+
+        x = constants.CRAFTING_GRID_X + (col * constants.SLOT_SIZE)
+        y = constants.CRAFTING_GRID_Y + (row * constants.SLOT_SIZE)        
         if button == 1:
             if self.dragged_item:
+                print(f"INTENTANDO soltar: {self.dragged_item.name} - qty: {self.dragged_item.quantity}")
                 #soltar item en la cuadricula
                 if self.crafting_grid[row][col] is None:
-                    self.crafting_grid[row][col] = self.dragged_item
+                    self.crafting_grid[row][col] = self.dragged_item                   
                     self.dragged_item = None
                 else:
                     #intercambiar items
@@ -283,6 +299,60 @@ class Inventory:
                 self.dragged_item = self.crafting_grid[row][col]
                 self.crafting_grid[row][col] = None
 
+                 # Calcular offset para el arrastre
+                item_rect = self.dragged_item.image.get_rect()
+                item_rect.x = x
+                item_rect.y = y
+                self.dragged_item.drag_offset = (mouse_x - item_rect.centerx,
+                                             mouse_y - item_rect.centery)
+
             #verificar receta despues de cada cambio
             self._check_recipe()            
 
+    def _handle_crafting_result_click (self, button):
+        if button == 1 and self.crafting_result: #click izquierdo si hay resultado
+            if not self.dragged_item:
+                # tomar el resultado
+                self.dragged_item = self.crafting_result
+                self.crafting_result = None
+                # consumir los materiales
+                for row in range(constants.CRAFTING_GRID_SIZE):
+                    for col in range(constants.CRAFTING_GRID_SIZE):
+                        if self.crafting_grid[row][col]:
+                            if self.crafting_grid[row][col].quantity > 1:
+                                self.crafting_grid[row][col].quantity -= 1
+                            else:
+                                self.crafting_grid[row][col] = None  
+
+    def _check_recipe(self):      
+        #obtener el patron actual
+        current_patern = []
+        for row in range(constants.CRAFTING_GRID_SIZE):
+            patter_row = []
+            for col in range(constants.CRAFTING_GRID_SIZE):
+                item = self.crafting_grid[row][col]
+                print(f"{row},{col}: {item.name if item else 'None'}")
+                patter_row.append(item.name if item else None)   
+            current_patern.append(tuple(patter_row))                                         
+
+        # verificar si conincide con alguna receta
+        for recipe_name, recipe in self.recipes.items():
+            matches = True
+            for row in range(constants.CRAFTING_GRID_SIZE):
+                for col in range(constants.CRAFTING_GRID_SIZE):
+                    expected = recipe['pattern'][row][col]
+                    actual = current_patern[row][col]
+                    if expected != actual:
+                        matches = False
+                        break
+                if not matches:
+                    break                                
+
+            if matches:
+                #crear un resultado
+                self.crafting_result = InventoryItem(recipe['result'],
+                                                     self.item_images[recipe['result']])  
+                return  
+            
+        #si no hay conincidencia, limpiar el resultado
+        self.crafting_result = None    

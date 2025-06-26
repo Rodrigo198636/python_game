@@ -12,6 +12,7 @@ screen = pygame.display.set_mode((constants.WIDTH, constants.HEIGTH))
 pygame.display.set_caption("Simulador de Vida Salvaje")
 
 def main():
+
     clock = pygame.time.Clock()
     world = World(constants.WIDTH, constants.HEIGTH)
     character = Character(constants.WIDTH // 2, constants.HEIGTH // 2)
@@ -41,8 +42,6 @@ def main():
                     character.update_thirst(20) 
         # manejar eventos del mouse para el inventario            
         if event.type == pygame.MOUSEBUTTONDOWN:
-            character.inventory.handle_click(pygame.mouse.get_pos(), event.button, show_inventory)
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             character.inventory.handle_click(pygame.mouse.get_pos(), event.button, show_inventory)
 
         dx = dy = 0
@@ -88,10 +87,7 @@ def main():
         world.draw(screen, camera_x, camera_y)        
         character.draw(screen, camera_x, camera_y)
         if show_inventory:
-            character.draw_inventory(screen)
-
-        if show_inventory:
-            character.draw_inventory(screen)    
+            character.draw_inventory(screen) 
 
         #dibujar inventario ( hotbar siempre visible + inventario principal si esta abierto)
         character.draw_inventory(screen, show_inventory)    

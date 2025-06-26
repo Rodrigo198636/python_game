@@ -2,14 +2,13 @@ import pygame
 import constants
 from constants import *
 import os
-from inventory import Inventory 
+from inventory import Inventory, InventoryItem 
 
 class Character:
     def __init__(self, x, y):
         self.x = x
         self.y = y
         self.inventory = Inventory()
-
         #cargar hoja de sprite
         image_path = os.path.join('assets', 'images', 'character', 'Player.png')
         self.sprite_sheet = pygame.image.load(image_path).convert_alpha()
@@ -32,6 +31,7 @@ class Character:
             "wood": self.load_item_image("wood.png"),
             "stone": self.load_item_image("small_stone.png") 
         }
+
 
         self.energy = constants.MAX_ENERGY
         self.food = constants.MAX_FOOD
@@ -144,7 +144,6 @@ class Character:
                 abs(self.y - obj.y) <= max(constants.PLAYER, obj.size)+5)
     
     def interact(self, world):
-        print("Se ejecutó interact()")
         for tree in world.trees:
             if self.is_near(tree):
                 if tree.chop():

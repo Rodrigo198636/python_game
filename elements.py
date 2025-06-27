@@ -28,9 +28,14 @@ class Tree:
                 screen_y + self.size >= 0 and screen_y <= constants.HEIGTH):
             screen.blit(self.image, (screen_x, screen_y))
 
-    def chop(self):
+    def chop(self, with_axe=False):
         if self.wood > 0:
-            self.wood -= 1
+            if with_axe:
+                self.wood -= 2
+                if self.wood < 0:
+                    self.wood = 0
+            else:         
+                self.wood -= 1        
             return True
         return False
 

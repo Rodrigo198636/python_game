@@ -17,6 +17,8 @@ class  InventoryItem:
 
 class Inventory:
     def __init__(self):
+        self.left_hand = None
+        self.right_hand = None
         self.hotbar = [None] * constants.HOTBAR_SLOTS
         self.inventory = [[None for _ in range(constants.INVENTORY_COLS)] for _ in range(constants.INVENTORY_ROWS)]
         self.crafting_grid = [[None for _ in range(constants.CRAFTING_GRID_SIZE)] for _ in range(constants.CRAFTING_GRID_SIZE)]
@@ -66,6 +68,8 @@ class Inventory:
         return False
 
     def draw(self, screen, show_inventory=False):
+        #dibujar slot de manos (siempre visibles)
+        self._draw_hand_slots(screen)
         #dibujar hotbar siempre visible
         self._draw_hotbar(screen)
 
@@ -136,8 +140,46 @@ class Inventory:
             text_rect.bottomright = (x + constants.SLOT_SIZE - 5, y + constants.SLOT_SIZE - 5)
             screen.blit(text, text_rect)
 
+    def _draw_hand_slots(self, screen):
+        #dibujar slot de la mano izquierda
+        pygame.draw.rect(screen, constants.SLOT_BORDER,
+                         (constants.LEFT_HAND_SLOT_X, constants.LEFT_HAND_SLOT_Y,
+                          constants.SLOT_SIZE, constants.SLOT_SIZE))
+        pygame.draw.rect(screen, constants.SLOT_COLOR,
+                         (constants.LEFT_HAND_SLOT_X + 2, constants.LEFT_HAND_SLOT_Y + 2,
+                             constants.SLOT_SIZE - 4, constants.SLOT_SIZE - 4))
+        if self.left_hand:
+            self._draw_item(screen, self.left_hand,
+                            constants.LEFT_HAND_SLOT_X,
+                            constants.LEFT_HAND_SLOT_Y)
+        #dibujar slot de la mano derecha
+        pygame.draw.rect(screen, constants.SLOT_BORDER,
+                         (constants.RIGHT_HAND_SLOT_X, constants.RIGHT_HAND_SLOT_Y,
+                          constants.SLOT_SIZE, constants.SLOT_SIZE))
+        pygame.draw.rect(screen, constants.SLOT_COLOR,
+                         (constants.RIGHT_HAND_SLOT_X + 2, constants.RIGHT_HAND_SLOT_Y +2,
+                          constants.SLOT_SIZE - 4, constants.SLOT_SIZE - 4))
+        if self.right_hand:
+            self._draw_item(screen, self.right_hand,
+                            constants.RIGHT_HAND_SLOT_X,
+                            constants.RIGHT_HAND_SLOT_Y)    
+
+
+
     def handle_click(self, pos, button, show_inventory=False):
         mouse_x, mouse_y = pos
+
+        # verificar slots de manos primero
+        if constants.HOTBAR_Y <= mouse_y <= constants.HOTBAR_Y + constants.SLOT_SIZE:
+            # slot mano izquierda
+            if (constants.LEFT_HAND_SLOT_X <= mouse_x <=
+                constants.LEFT_HAND_SLOT_X + constants.SLOT_SIZE):
+                self._handle_hand_slot_click(button, 'left')
+                return True
+            # slot mano derecha
+            elif (constants.RIGHT_HAND_SLOT_X <= mouse_x <=
+                  constants.RIGHT_HAND_SLOT_X + constants.SLOT_SIZE):
+                self._handle_hand_slot_click(button, 'right')
 
         #verificar click en hotbar
         if constants.HOTBAR_Y <= mouse_y <= constants.HOTBAR_Y + constants.SLOT_SIZE:
@@ -228,7 +270,32 @@ class Inventory:
                 item_rect.x = slot_x
                 item_rect.y = slot_y            
                 self.dragged_item.drag_offset = (mouse_x - item_rect.centerx,
-                                                 mouse_y - item_rect.centery)  
+                                                 mouse_y - item_rect.centery) 
+
+    def _handle_hand_slot_click(self, button, hand):
+        if button == 1: #Left click
+            if hand == 'left':
+                if self.dragged_item:
+                    if self.dragged_item.name == 'axe': #only allow ace in hands
+                        self.left_hand, self.dragged_item = self.dragged_item, self.left_hand
+                elif self.left_hand:
+                    self.dragged_item = self.left_hand
+                    self.left_hand = None
+
+            elif hand == 'right':
+                if self.dragged_item:
+                    if self.dragged_item.name == 'axe':
+                        self.right_hand, self.dragged_item = self.dragged_item, self.right_hand
+                elif self.right_hand:
+                    self.dragged_item = self.right_hand
+                    self.right_hand = None
+
+    def has_axe_equipped(self):
+        return (
+            (self.left_hand and self.left_hand.name == 'axe') or 
+            (self.right_hand and self.right_hand.name == 'axe')
+        )                                                            
+
 
     def _return_dragged_item(self):
         #intentar devolver el hotbar primero
@@ -286,7 +353,6 @@ class Inventory:
         y = constants.CRAFTING_GRID_Y + (row * constants.SLOT_SIZE)        
         if button == 1:
             if self.dragged_item:
-                print(f"INTENTANDO soltar: {self.dragged_item.name} - qty: {self.dragged_item.quantity}")
                 #soltar item en la cuadricula
                 if self.crafting_grid[row][col] is None:
                     self.crafting_grid[row][col] = self.dragged_item                   
@@ -331,7 +397,6 @@ class Inventory:
             patter_row = []
             for col in range(constants.CRAFTING_GRID_SIZE):
                 item = self.crafting_grid[row][col]
-                print(f"{row},{col}: {item.name if item else 'None'}")
                 patter_row.append(item.name if item else None)   
             current_patern.append(tuple(patter_row))                                         
 

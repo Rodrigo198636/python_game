@@ -9,6 +9,12 @@ class Character:
         self.x = x
         self.y = y
         self.inventory = Inventory()
+
+        # cargar hoja de sprites de animacion del hacha
+        self.action_sprite_sheet = pygame.image.load(
+            os.path.join('assets', 'images', 'character', 'Player_Actions.png')
+        ).convert_alpha()
+
         #cargar hoja de sprite
         image_path = os.path.join('assets', 'images', 'character', 'Player.png')
         self.sprite_sheet = pygame.image.load(image_path).convert_alpha()
@@ -23,8 +29,14 @@ class Character:
         self.facing_left = False
         self.is_running = False
 
+        #agregar propiedades de animacion del hacha
+        self.is_chopping = False
+        self.chop_timer = 0
+        self.chop_frame = 0
+
         #load all animation frames
         self.animations = self.load_animations()
+        self.axe_animations = self.load_axe_animations()
 
 
         self.item_images = {
@@ -36,33 +48,88 @@ class Character:
         self.energy = constants.MAX_ENERGY
         self.food = constants.MAX_FOOD
         self.thirst = constants.MAX_THIRST
-        self.stamina = constants.MAX_STAMINA
+        self.stamina = constants.MAX_STAMINA       
+
+
 
     def load_animations(self):
         animations = {}
         for state in range(6):  # 6 animation states
             frames = []
             for frame in range(BASIC_FRAMES):  # 6 frames per animation
-                surface = pygame.Surface((self.frame_size, self.frame_size), pygame.SRCALPHA)
-                surface.blit(self.sprite_sheet, (0, 0),
+                temp_surface = pygame.Surface((self.frame_size, self.frame_size), pygame.SRCALPHA)
+                temp_surface.blit(self.sprite_sheet, (0, 0),
                             (frame * self.frame_size,
                             state * self.frame_size,
                             self.frame_size,
                             self.frame_size))
-                if constants.PLAYER != self.frame_size:
-                    surface = pygame.transform.scale(surface, (constants.PLAYER, constants.PLAYER))
+                
+                #create final surface at player size
+                surface = pygame.transform.scale(temp_surface, (constants.PLAYER, constants.PLAYER))
+                #scale and blit the temp surface onto the final surface
+                scaled_temp = pygame.transform.scale(temp_surface, (constants.PLAYER, constants.PLAYER))
+                surface.blit(scaled_temp, (0, 0))
                 frames.append(surface)
             animations[state] = frames
-        return animations  # ✅ ¡NO OLVIDES DEVOLVERLO!
+        return animations  
+    
+    def load_axe_animations(self):
+        animations = {}
+        # map the sprite sheet rows to animation states
+        # row 3 8 (index 3) for rigth-facing
+        # row 4 (index 4) for down-facing
+        # row 5 (index 5) for up-facing
+        row_mapping = {
+            3: 3, #right facing animations in row 4
+            4: 4, #down facing animation in row 5
+            5: 5, #up-facing animations in row 6
+        }
+
+        for state, row in row_mapping.items():
+            frames = []
+            for frame in range(AXE_FRAMES):
+                #create a temporary surface to hold the frame
+                temp_surface = pygame.Surface((constants.ACTION_FRAME_SIZE, constants.ACTION_FRAME_SIZE), pygame.SRCALPHA)
+                #calculate x position based on frame number and columns
+                x = (frame % AXE_COLS) * constants.ACTION_FRAME_SIZE
+                #Get the frame from the correct position in the sprite sheet
+                frame_rect = pygame.Rect(x, row * constants.ACTION_FRAME_SIZE,
+                                         constants.ACTION_FRAME_SIZE,
+                                         constants.ACTION_FRAME_SIZE)
+                # draw the frame onto the temporary surface
+                temp_surface.blit(self.action_sprite_sheet, (0, 0), frame_rect)
+
+                # calculate the proper size for action frames
+                action_scale = constants.ACTION_FRAME_SIZE / constants.FRAME_SIZE
+                action_size = int(constants.PLAYER * action_scale)
+
+                #create the final surface at the scaled action size
+                surface = pygame.Surface((action_scale, action_size), pygame.SRCALPHA)
+
+                # scale and blit the temp surface onto the final surface
+                scaled_temp = pygame.transform.scale(temp_surface, (action_size, action_size))
+                surface.blit(scaled_temp, (0, 0))
+
+                frames.append(surface)
+            animations[state] = frames
+        return animations        
 
 
     def update_animation(self):
         current_time = pygame.time.get_ticks()
-        # ajustar la velociad de la animacion segun si esta corriendo o caminando
-        animation_spped = RUNNING_ANIMATION_DELAY if self.is_running else ANIMATION_DELAY
-        if current_time - self.animation_timer > animation_spped:
-            self.animation_timer = current_time
-            self.animation_frame = (self.animation_frame + 1) % 6               
+
+        if self.is_chopping:
+            if current_time - self.chop_timer > AXE_ANIMATION_DELAY:
+                self.chop_timer = current_time
+                self.chop_frame = (self.chop_frame + 1) % AXE_FRAMES
+                if self.chop_frame == 0: # animation completed
+                    self.is_chopping = False
+        else:
+            # ajustar la velociad de la animacion segun si esta corriendo o caminando
+            animation_spped = RUNNING_ANIMATION_DELAY if self.is_running else ANIMATION_DELAY
+            if current_time - self.animation_timer > animation_spped:
+                self.animation_timer = current_time
+                self.animation_frame = (self.animation_frame + 1) % 6               
 
     def load_item_image(self, filename):
         path = os.path.join('assets', 'images', 'objects', filename)
@@ -74,13 +141,26 @@ class Character:
         screen_x = self.x - camera_x
         screen_y = self.y - camera_y
 
+        if self.is_chopping:
+            if self.current_state in [IDLE_RIGTH, WALK_RIGTH]:
+                current_frame = self.axe_animations[3][self.chop_frame]
+                if self.facing_left:
+                    current_frame = pygame.transform.flip(current_frame, True, False)
+            elif self.current_state in [IDLE_DOWN, WALK_DOWN]:
+                current_frame = self.axe_animations[4][self.chop_frame]
+            elif self.current_state in [IDLE_UP, WALK_UP]:
+                current_frame = self.axe_animations[5][self.chop_frame]
+        else:                  
+            current_frame = self.animations[self.current_state][self.animation_frame]
+            if self.facing_left:
+                current_frame = pygame.transform.flip(current_frame, True, False)
 
-        current_frame = self.animations[self.current_state][self.animation_frame]
-        if self.facing_left:
-            current_frame = pygame.transform.flip(current_frame, True, False)
-          
-        screen.blit(current_frame, (screen_x, screen_y))
-
+        if self.is_chopping:
+            action_scale = constants.ACTION_FRAME_SIZE / constants.FRAME_SIZE
+            size_diff = int(constants.PLAYER * (action_scale - 1))
+            screen.blit(current_frame, (screen_x - size_diff // 2, screen_y - size_diff // 2))
+        else:                    
+            screen.blit(current_frame, (screen_x, screen_y))
         self.draw_status_bar(screen)    
 
     def move(self, dx, dy, world):
@@ -145,10 +225,15 @@ class Character:
     
     def interact(self, world):
         for tree in world.trees:
-            if self.is_near(tree):
-                if tree.chop():
-                    self.inventory.add_item('wood')
-                    return    
+           if self.is_near(tree):
+               has_axe = self.inventory.has_axe_equipped()
+               if has_axe:
+                   self.is_chopping = True
+                   self.chop_timer = pygame.time.get_ticks()
+                   self.chop_frame = 0
+               if tree.chop(with_axe=has_axe):
+                   self.inventory.add_item('wood')
+               return      
 
         for stone in world.small_stones:
             if self.is_near(stone):

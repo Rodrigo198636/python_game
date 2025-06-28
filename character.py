@@ -29,14 +29,18 @@ class Character:
         self.facing_left = False
         self.is_running = False
 
-        #agregar propiedades de animacion del hacha
+        #agregar propiedades de animacion de las herramientas
         self.is_chopping = False
         self.chop_timer = 0
         self.chop_frame = 0
+        self.is_hoeing = False
+        self.hoe_timer = 0
+        self.hoe_frame = 0
 
         #load all animation frames
         self.animations = self.load_animations()
         self.axe_animations = self.load_axe_animations()
+        self.hoe_animations = self.load_hoe_animations()        
 
 
         self.item_images = {
@@ -104,7 +108,7 @@ class Character:
                 action_size = int(constants.PLAYER * action_scale)
 
                 #create the final surface at the scaled action size
-                surface = pygame.Surface((action_scale, action_size), pygame.SRCALPHA)
+                surface = pygame.Surface((action_size, action_size), pygame.SRCALPHA)
 
                 # scale and blit the temp surface onto the final surface
                 scaled_temp = pygame.transform.scale(temp_surface, (action_size, action_size))
@@ -112,7 +116,48 @@ class Character:
 
                 frames.append(surface)
             animations[state] = frames
-        return animations        
+        return animations  
+
+    def load_hoe_animations(self):
+        animations = {}
+        # map the sprite sheet rows to animation states
+        # row 3 8 (index 3) for rigth-facing
+        # row 4 (index 4) for down-facing
+        # row 5 (index 5) for up-facing
+        row_mapping = {
+            6: 6, #right facing animations in row 4
+            7: 7, #down facing animation in row 5
+            8: 8, #up-facing animations in row 6
+        }
+
+        for state, row in row_mapping.items():
+            frames = []
+            for frame in range(HOE_FRAMES):
+                #create a temporary surface to hold the frame
+                temp_surface = pygame.Surface((constants.ACTION_FRAME_SIZE, constants.ACTION_FRAME_SIZE), pygame.SRCALPHA)
+                #calculate x position based on frame number and columns
+                x = (frame % HOE_COLS) * constants.ACTION_FRAME_SIZE
+                #Get the frame from the correct position in the sprite sheet
+                frame_rect = pygame.Rect(x, row * constants.ACTION_FRAME_SIZE,
+                                         constants.ACTION_FRAME_SIZE,
+                                         constants.ACTION_FRAME_SIZE)
+                # draw the frame onto the temporary surface
+                temp_surface.blit(self.action_sprite_sheet, (0, 0), frame_rect)
+
+                # calculate the proper size for action frames
+                action_scale = constants.ACTION_FRAME_SIZE / constants.FRAME_SIZE
+                action_size = int(constants.PLAYER * action_scale)
+
+                #create the final surface at the scaled action size
+                surface = pygame.Surface((action_size, action_size), pygame.SRCALPHA)
+
+                # scale and blit the temp surface onto the final surface
+                scaled_temp = pygame.transform.scale(temp_surface, (action_size, action_size))
+                surface.blit(scaled_temp, (0, 0))
+
+                frames.append(surface)
+            animations[state] = frames
+        return animations               
 
 
     def update_animation(self):
@@ -124,6 +169,12 @@ class Character:
                 self.chop_frame = (self.chop_frame + 1) % AXE_FRAMES
                 if self.chop_frame == 0: # animation completed
                     self.is_chopping = False
+        elif self.is_hoeing:
+            if current_time - self.hoe_timer > HOE_ANIMATION_DELAY:
+                self.hoe_timer = current_time
+                self.hoe_frame = (self.hoe_frame + 1) % HOE_FRAMES
+                if self.hoe_frame == 0: #animation completed
+                    self.is_hoeing = False
         else:
             # ajustar la velociad de la animacion segun si esta corriendo o caminando
             animation_spped = RUNNING_ANIMATION_DELAY if self.is_running else ANIMATION_DELAY
@@ -150,6 +201,15 @@ class Character:
                 current_frame = self.axe_animations[4][self.chop_frame]
             elif self.current_state in [IDLE_UP, WALK_UP]:
                 current_frame = self.axe_animations[5][self.chop_frame]
+        elif self.is_hoeing:
+            if self.current_state in [IDLE_RIGTH, WALK_RIGTH]:
+                current_frame = self.hoe_animations[6][self.hoe_frame]
+                if self.facing_left:
+                    current_frame = pygame.transform.flip(current_frame, True, False)
+            elif self.current_state in [IDLE_DOWN, WALK_DOWN]:
+                current_frame = self.hoe_animations[7][self.hoe_frame]
+            elif self.current_state in [IDLE_UP, WALK_UP]:
+                current_frame = self.hoe_animations[8][self.hoe_frame]                                        
         else:                  
             current_frame = self.animations[self.current_state][self.animation_frame]
             if self.facing_left:
@@ -224,6 +284,13 @@ class Character:
                 abs(self.y - obj.y) <= max(constants.PLAYER, obj.size)+5)
     
     def interact(self, world):
+        # check if 'e' key is pressed and hoe is equipped
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_e] and self.inventory.has_hoe_equipped():
+            self.is_hoeing = True
+            self.hoe_timer = pygame.time.get_ticks()
+            self.hoe_frame = 0
+            return
         for tree in world.trees:
            if self.is_near(tree):
                has_axe = self.inventory.has_axe_equipped()

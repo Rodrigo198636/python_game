@@ -97,10 +97,13 @@ LEFT_HAND_SLOT_Y = HOTBAR_Y
 RIGHT_HAND_SLOT_X = HOTBAR_X + (SLOT_SIZE * HOTBAR_SLOTS) + MARGIN
 RIGHT_HAND_SLOT_Y = HOTBAR_Y 
 
-#axe animation settings
+#tools animation settings
 AXE_COLS = 2
 AXE_FRAMES = 2
 AXE_ANIMATION_DELAY = 200
+HOE_COLS = 2
+HOE_FRAMES = 2
+HOE_ANIMATION_DELAY = 200
 
 # colores del inventory
 SLOT_COLOR = (139, 139, 139) #gris

@@ -30,7 +30,8 @@ class Inventory:
         self.item_images = {
             'wood': os.path.join('assets', 'images', 'objects', 'wood.png'),
             'stone': os.path.join('assets', 'images', 'objects', 'small_stone.png'),
-            'axe': os.path.join('assets', 'images', 'objects', 'axe.png')            
+            'axe': os.path.join('assets', 'images', 'objects', 'axe.png'),
+            'hoe': os.path.join('assets', 'images', 'objects', 'hoe.png')                
         }        
 
         #defirnir recetas de grafico
@@ -42,7 +43,16 @@ class Inventory:
                     [None, None, None]
                 ],
                 'result': 'axe'
-    }
+            },
+            'hoe': {
+                'pattern': [
+                    ['stone', 'wood', None],
+                    [None, None, None],
+                    [None, None, None]
+                ],
+                'result': 'hoe'
+            },
+                        
 }
    
 
@@ -276,7 +286,7 @@ class Inventory:
         if button == 1: #Left click
             if hand == 'left':
                 if self.dragged_item:
-                    if self.dragged_item.name == 'axe': #only allow ace in hands
+                    if self.dragged_item.name in ['axe', 'hoe']: 
                         self.left_hand, self.dragged_item = self.dragged_item, self.left_hand
                 elif self.left_hand:
                     self.dragged_item = self.left_hand
@@ -284,7 +294,7 @@ class Inventory:
 
             elif hand == 'right':
                 if self.dragged_item:
-                    if self.dragged_item.name == 'axe':
+                    if self.dragged_item.name in ['axe', 'hoe']:
                         self.right_hand, self.dragged_item = self.dragged_item, self.right_hand
                 elif self.right_hand:
                     self.dragged_item = self.right_hand
@@ -294,7 +304,13 @@ class Inventory:
         return (
             (self.left_hand and self.left_hand.name == 'axe') or 
             (self.right_hand and self.right_hand.name == 'axe')
-        )                                                            
+        )   
+          
+    def has_hoe_equipped(self):
+        return (
+            (self.left_hand and self.left_hand.name == 'hoe') or 
+            (self.right_hand and self.right_hand.name == 'hoe')
+        )                                                          
 
 
     def _return_dragged_item(self):

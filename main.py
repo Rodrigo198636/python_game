@@ -84,11 +84,13 @@ def main():
         
 
         world.update_time(dt)
-        world.draw(screen, camera_x, camera_y)        
+        world.draw(screen, camera_x, camera_y)  
+        character.update_animation()      
         character.draw(screen, camera_x, camera_y)
         if show_inventory:
             character.draw_inventory(screen) 
 
+      
         #dibujar inventario ( hotbar siempre visible + inventario principal si esta abierto)
         character.draw_inventory(screen, show_inventory)    
 

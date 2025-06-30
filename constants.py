@@ -109,3 +109,9 @@ HOE_ANIMATION_DELAY = 200
 SLOT_COLOR = (139, 139, 139) #gris
 SLOT_BORDER = (100, 100, 100) # gris oscuro
 SLOT_HOVER = (160, 160, 160) # gris claro
+
+# constantes para el agua
+WATER_COLOR = (64, 164, 223, 100) # azul semi-transparente para agua
+WATER_MOVEMENTS_MULTIPLIER = 0.5 # movimiento mas lento en agua
+WATER_GENERATION_PROBABILITY = 0.3 # probabilidad de generar agua en el chunk
+WATER_THIRST_RECOVERY = 20 # cantidad de sed recuperada al beber agua

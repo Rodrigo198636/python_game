@@ -223,12 +223,22 @@ class Character:
             screen.blit(current_frame, (screen_x, screen_y))
         self.draw_status_bar(screen)    
 
+    def is_in_water(self, world):
+        """verifica si el personaje esa en el agua"""    
+        return world.is_water_at(self.x + constants.PLAYER // 2, self.y + constants.PLAYER // 2)
+
     def move(self, dx, dy, world):
         self.moving = dx != 0 or dy != 0
 
         if self.moving:
             # ajustar la velocidad segn si esta corriendo o caminando
             speed_multiplier = RUN_SPEED if self.is_running and self.stamina > 0 else WALK_SPEED
+
+            # reducir velocidad si esta en el agua
+            if self.is_in_water(world):
+                speed_multiplier *= constants.WATER_MOVEMENTS_MULTIPLIER
+
+
             dx *= speed_multiplier / WALK_SPEED
             dy *= speed_multiplier /WALK_SPEED
             if dy > 0:
@@ -286,11 +296,35 @@ class Character:
     def interact(self, world):
         # check if 'e' key is pressed and hoe is equipped
         keys = pygame.key.get_pressed()
+
+        if keys[pygame.K_e]:
+            #verificar si tiene cubeta llena
+            water_bucket_equipped, hand = self.inventory.has_water_bucket_equipped()
+            if water_bucket_equipped:
+                self.inventory.empty_bucket(hand)
+                return
+
+
+        # si esta en el agua, verificar si tiene una cubeta equipada
+        if keys[pygame.K_e] and self.is_in_water(world):
+            bucket_equipped, hand = self.inventory.has_bucket_equipped()
+            if bucket_equipped:
+                #llenar la cubeta
+                self.inventory.fill_bucket(hand)
+                return
+            #si no tiene cubeta, solo beber agua
+            self.update_thirst(constants.WATER_THIRST_RECOVERY)
+            return
+       
+
         if keys[pygame.K_e] and self.inventory.has_hoe_equipped():
             self.is_hoeing = True
             self.hoe_timer = pygame.time.get_ticks()
             self.hoe_frame = 0
+            #intentar crear tierra de cultivo en la posicion actual
+            world.add_farmland(self.x, self.y)            
             return
+        
         for tree in world.trees:
            if self.is_near(tree):
                has_axe = self.inventory.has_axe_equipped()
@@ -361,8 +395,26 @@ class Character:
         pygame.draw.rect(screen, constants.STAMINA_COLOR,
                          (x_offset, y_offset,
                           bar_width * (self.stamina / constants.MAX_STAMINA), bar_heigth))
+        
+        #mostrar mensaje si esta en el agua
+        font = pygame.font.Font(None, 20)
+        if hasattr(self, 'in_water') and self.in_water:
+            #verificar si tiene cubeta
+            bucket_equipped = self.inventory.has_bucket_equipped()
+            water_bucket_equipped, _ = self.inventory.has_water_bucket_equipped()
+            if bucket_equipped:
+                water_text = font.render("Press 'E' to fill bucket", True, constants.WHITE)
+                screen.blit(water_text, (x_offset, y_offset + 25))
+            elif water_bucket_equipped:
+                water_text = font.render("Press 'E' to empty bucket", True, constants.WHITE)
+                screen.blit(water_text, (x_offset, y_offset + 25))
+            else:
+                water_text = font.render("Press 'E' to drink water", True, constants.WHITE)
+                screen.blit(water_text, (x_offset, y_offset + 25))        
+        
 
-    def update_status(self):
+
+    def update_status(self, world=None):
         #aplicar multiplicadores siesta corriendo
         food_rate = FOOD_DECREASE_RATE * (RUN_FOOD__DECREASE_MULTIPLIER if self.is_running else 1)
         thirst_rate = THIRST_DECREASE_RATE * (RUN_THIRST_DECREASE_MULTIPLIER if self.is_running else 1)
@@ -376,4 +428,8 @@ class Character:
 
         # recuperar stamina cuando no esta corriendo
         if not self.is_running:
-            self.update_stamina(STAMINA_INCREASE_RATE)      
+            self.update_stamina(STAMINA_INCREASE_RATE)     
+
+        #actualizar estado de agua
+        if world:
+            self.in_water = self.is_in_water(world)     

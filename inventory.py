@@ -33,7 +33,8 @@ class Inventory:
             'axe': os.path.join('assets', 'images', 'objects', 'axe.png'),
             'hoe': os.path.join('assets', 'images', 'objects', 'hoe.png'), 
             'bucket': os.path.join('assets', 'images', 'objects', 'bucket.png'), 
-            'water_bucket': os.path.join('assets', 'images', 'objects', 'bucket_water.png')                             
+            'water_bucket': os.path.join('assets', 'images', 'objects', 'bucket_water.png'), 
+            'carrot': os.path.join('assets', 'images', 'objects', 'carrot.png')                               
         }        
 
         #defirnir recetas de grafico

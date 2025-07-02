@@ -78,11 +78,18 @@ class FarmLand:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.is_watered = False
+        self.growth_stage = 0
+        self.las_update_time =pygame.time.get_ticks()
 
-        farmland_path = os.path.join('assets', 'images', 'objects', 'FarmLand.png')
-        self.image = pygame.image.load(farmland_path).convert_alpha()
-        self.image = pygame.transform.scale(self.image, (constants.GRASS, constants.GRASS))
-        self.size = self.image.get_width()
+    # cargar todas las imagenes de tierra de cultivo
+        self.images = {}
+        for i in range(1, 7):
+            path = os.path.join('assets', 'images', 'objects', 'Farm', f'Farmland{i}.png')
+            self.images[i] = pygame.image.load(path).convert_alpha()
+            self.images[i] = pygame.transform.scale(self.images[i], (constants.GRASS, constants.GRASS)) 
+
+        self.size = constants.GRASS    
 
     def draw(self, screen, camera_x, camera_y):
         screen_x = self.x - camera_x
@@ -90,7 +97,37 @@ class FarmLand:
 
         if (screen_x + self.size >= 0 and screen_x <= constants.WIDTH and
                 screen_y + self.size >= 0 and screen_y <= constants.HEIGTH):
-            screen.blit(self.image, (screen_x, screen_y))    
+            image_key = min(6, max(1, self.growth_stage + 1))
+            screen.blit(self.images[image_key], (screen_x, screen_y))   
+
+    def water(self):
+        """regar la tierra de cultivo"""
+        if not self.is_watered:
+            self.is_watered = True
+            self.las_update_time = pygame.time.get_ticks()     
+            return True
+        return False   
+    
+    def update(self, current_time):
+        """actualizar crecimiento basado en el tiempo transcurrido"""
+        #solo crecer si esta regada"
+        if self.is_watered and self.growth_stage < 5:
+            #verificar si ha ásado tiempo para crecer(5 minutos de juego = 10 segundos de tiempo real)
+            if self.growth_stage == 0:
+                self.growth_stage = 1
+            if current_time - self.las_update_time > 10000:
+                self.growth_stage = min(5, self.growth_stage + 1)   
+                self.las_update_time = current_time
+
+    def harvest(self):
+        """cocechar cultivos si estan completamente crecidos"""
+        if self.growth_stage == 5:
+            harvested = True
+            self.growth_stage = 0
+            self.is_watered = False
+            return harvested
+        return False            
+
 
 class Water:
     def __init__(self, x, y, is_flowing=False):

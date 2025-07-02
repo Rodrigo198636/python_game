@@ -69,6 +69,9 @@ def main():
         # actualizar chunks basado enlaposicion del personajee
         world.update_chunks(character.x, character.y)
 
+        #actualizar elementos del mundo
+        world.update(dt)
+
 
 
         status_update_time += dt
@@ -85,8 +88,9 @@ def main():
            
                                      
         
+        #actualizar tiempor dle dia
+        world.update_time(dt)     
 
-        world.update_time(dt)        
         world.draw(screen, camera_x, camera_y)  
         character.update_animation()      
         character.draw(screen, camera_x, camera_y)

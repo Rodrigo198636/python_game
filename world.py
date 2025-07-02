@@ -317,3 +317,32 @@ class World:
             return tile_key in chunk.water_tiles
 
         return False          
+    
+    def get_farmland_at(self, x, y):
+        """obtener el objeto de tierra de cultivo en las coordenadas especificadas, si existe"""
+        chunk_key = self.get_chunk_key(x, y)
+        chunk = self.active_chunks.get(chunk_key)
+
+        if chunk:
+            #convertir a coordenadas de cuadricula
+            grid_x = (x // constants.GRASS) * constants.GRASS
+            grid_y = (y // constants.GRASS) * constants.GRASS
+
+            tile_key = (grid_x, grid_y)
+            return chunk.farmland_tiles.get(tile_key)
+        return None
+    
+    def update(self, dt):
+        """actualiza todos los chunks activos y sus elementos"""
+        current_time = pygame.time.get_ticks()
+
+        #actualizar la hora del dia
+        self.update_time(dt)
+
+        #actualizar tierras de cultivo en todos los chunks activos
+        for chunk in self.active_chunks.values():
+            chunk.update(dt)
+
+            #actualizar todas las casilas de tierra de cultivo con la hora actula
+            for farmland in chunk.farmland_tiles.values():
+                farmland.update(current_time)

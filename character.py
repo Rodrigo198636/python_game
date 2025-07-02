@@ -297,12 +297,24 @@ class Character:
         # check if 'e' key is pressed and hoe is equipped
         keys = pygame.key.get_pressed()
 
-        if keys[pygame.K_e]:
-            #verificar si tiene cubeta llena
-            water_bucket_equipped, hand = self.inventory.has_water_bucket_equipped()
-            if water_bucket_equipped:
+        #verificar si tiene cubeta llena equipada
+        water_bucket_equipped, hand = self.inventory.has_water_bucket_equipped()
+        if water_bucket_equipped and keys[pygame.K_e]:
+            #obtener posicion de casilla donde esta parado el jugador
+            grid_x = (self.x // constants.GRASS) * constants.GRASS
+            grid_y = (self.y // constants.GRASS) * constants.GRASS
+
+            #verificar si hay tierra de cultivo en esta posicion
+            farmland = world.get_farmland_at(grid_x, grid_y)
+            if farmland: 
+                if farmland.water():
+                    #vaciar el cubo despues de regar
+                    self.inventory.empty_bucket(hand)
+                    return
+                #si no se encuentra tierra del cultivo o ya esta regada, vaciar el dubo
                 self.inventory.empty_bucket(hand)
                 return
+
 
 
         # si esta en el agua, verificar si tiene una cubeta equipada
@@ -316,7 +328,7 @@ class Character:
             self.update_thirst(constants.WATER_THIRST_RECOVERY)
             return
        
-
+        #si tiene la azada equipada
         if keys[pygame.K_e] and self.inventory.has_hoe_equipped():
             self.is_hoeing = True
             self.hoe_timer = pygame.time.get_ticks()
@@ -325,6 +337,15 @@ class Character:
             world.add_farmland(self.x, self.y)            
             return
         
+        #verificar si podemos cosechar cultivos presionando E
+        if keys[pygame.K_e]:
+            grid_x = (self.x // constants.GRASS) * constants.GRASS
+            grid_y = (self.y // constants.GRASS) * constants.GRASS
+            farmland = world.get_farmland_at(grid_x, grid_y)
+            if farmland and farmland.harvest():
+                self.inventory.add_item('carrot')
+                return
+         
         for tree in world.trees:
            if self.is_near(tree):
                has_axe = self.inventory.has_axe_equipped()
